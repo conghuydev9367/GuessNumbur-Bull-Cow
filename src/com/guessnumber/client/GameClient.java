@@ -39,7 +39,9 @@ public class GameClient extends JFrame {
     private Scanner input;
     private volatile boolean connected = false;
 
-    public GameClient() { setupGUI(); }
+    public GameClient() {
+        setupGUI();
+    }
 
     private void setupGUI() {
         setTitle("\uD83C\uDFAE Game \u0110o\u00e1n S\u1ed1");
@@ -54,21 +56,29 @@ public class GameClient extends JFrame {
 
         loginPanel = new LoginPanel(this);
         lobbyPanel = new LobbyPanel(this);
-        roomPanel  = new RoomPanel(this);
+        roomPanel = new RoomPanel(this);
 
         mainPanel.add(loginPanel, "login");
         mainPanel.add(lobbyPanel, "lobby");
-        mainPanel.add(roomPanel,  "room");
+        mainPanel.add(roomPanel, "room");
 
         add(mainPanel);
         cardLayout.show(mainPanel, "login");
     }
 
-    public String getCurrentRoom() { return currentRoom; }
-    public boolean isMyTurn() { return myTurn; }
+    public String getCurrentRoom() {
+        return currentRoom;
+    }
+
+    public boolean isMyTurn() {
+        return myTurn;
+    }
 
     private void stopLocalTimer() {
-        if (turnTimer != null) { turnTimer.stop(); turnTimer = null; }
+        if (turnTimer != null) {
+            turnTimer.stop();
+            turnTimer = null;
+        }
     }
 
     public void send(Message msg) {
@@ -77,14 +87,38 @@ public class GameClient extends JFrame {
         }
     }
 
-    public void sendChat(String content) { send(Message.of("CHAT", content)); }
-    public void createRoom(int digits, int turnTime) { send(Message.of("CREATE_ROOM", String.valueOf(digits), String.valueOf(turnTime))); }
-    public void joinRoom(String roomCode) { send(Message.of("JOIN_ROOM", roomCode)); }
-    public void leaveRoom() { send(Message.of("LEAVE_ROOM", "")); }
-    public void roomChat(String content) { send(Message.of("ROOM_CHAT", content)); }
-    public void startGame() { send(Message.of("START_GAME", "")); }
-    public void setSecret(String secret) { send(Message.of("SET_SECRET", secret)); }
-    public void guess(String value) { lastGuess = value; send(Message.of("GUESS", value)); }
+    public void sendChat(String content) {
+        send(Message.of("CHAT", content));
+    }
+
+    public void createRoom(int digits, int turnTime) {
+        send(Message.of("CREATE_ROOM", String.valueOf(digits), String.valueOf(turnTime)));
+    }
+
+    public void joinRoom(String roomCode) {
+        send(Message.of("JOIN_ROOM", roomCode));
+    }
+
+    public void leaveRoom() {
+        send(Message.of("LEAVE_ROOM", ""));
+    }
+
+    public void roomChat(String content) {
+        send(Message.of("ROOM_CHAT", content));
+    }
+
+    public void startGame() {
+        send(Message.of("START_GAME", ""));
+    }
+
+    public void setSecret(String secret) {
+        send(Message.of("SET_SECRET", secret));
+    }
+
+    public void guess(String value) {
+        lastGuess = value;
+        send(Message.of("GUESS", value));
+    }
 
     public void discoverServer() {
         new Thread(() -> {
@@ -94,7 +128,7 @@ public class GameClient extends JFrame {
                 ds.setSoTimeout(3000);
                 byte[] data = DISCOVER_REQ.getBytes();
                 DatagramPacket pkt = new DatagramPacket(data, data.length,
-                    InetAddress.getByName("255.255.255.255"), UDP_PORT);
+                        InetAddress.getByName("255.255.255.255"), UDP_PORT);
                 ds.send(pkt);
                 byte[] buf = new byte[256];
                 DatagramPacket resp = new DatagramPacket(buf, buf.length);
@@ -106,19 +140,17 @@ public class GameClient extends JFrame {
                     SwingUtilities.invokeLater(() -> {
                         loginPanel.setServerIp(ip);
                         JOptionPane.showMessageDialog(this,
-                            "Tìm thấy server: " + ip, "\uD83D\uDCE1 Phát hiện",
-                            JOptionPane.INFORMATION_MESSAGE);
+                                "Tìm thấy server: " + ip, "\uD83D\uDCE1 Phát hiện",
+                                JOptionPane.INFORMATION_MESSAGE);
                     });
                 }
                 ds.close();
             } catch (SocketTimeoutException e) {
-                SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
                         "Không tìm thấy server trên mạng LAN!", "Lỗi",
                         JOptionPane.WARNING_MESSAGE));
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
                         "Lỗi: " + e.getMessage(), "Lỗi",
                         JOptionPane.ERROR_MESSAGE));
             }
@@ -129,11 +161,14 @@ public class GameClient extends JFrame {
         String nick = loginPanel.getNickname();
         if (nick.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Hãy nhập nickname!", "Lỗi",
-                JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
         String ip = loginPanel.getServerIp();
-        if (ip.equals("auto") || ip.isEmpty()) { discoverServer(); return; }
+        if (ip.equals("auto") || ip.isEmpty()) {
+            discoverServer();
+            return;
+        }
 
         new Thread(() -> {
             try {
@@ -146,8 +181,7 @@ public class GameClient extends JFrame {
                 send(Message.of("NICK", nick));
                 new Thread(this::listenServer, "Listener").start();
             } catch (Exception e) {
-                SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this,
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
                         "Không thể kết nối: " + e.getMessage(), "Lỗi",
                         JOptionPane.ERROR_MESSAGE));
             }
@@ -177,7 +211,8 @@ public class GameClient extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
             switch (cmd) {
-                case "WELCOME": break;
+                case "WELCOME":
+                    break;
                 case "NICK_OK":
                     cardLayout.show(mainPanel, "lobby");
                     setTitle("\uD83C\uDFAE Game \u0110o\u00e1n S\u1ed1 - " + nickname);
@@ -233,21 +268,27 @@ public class GameClient extends JFrame {
                     }
                     break;
                 case "ROOM_PLAYER_JOINED":
-                    if (msg.fieldCount() >= 1) roomPanel.appendChat("\u27A1\uFE0F " + msg.field(0) + " đã vào phòng\n");
+                    if (msg.fieldCount() >= 1)
+                        roomPanel.appendChat("\u27A1\uFE0F " + msg.field(0) + " đã vào phòng\n");
                     break;
                 case "ROOM_PLAYER_LEFT":
-                    if (msg.fieldCount() >= 1) roomPanel.appendChat("\u2B05\uFE0F " + msg.field(0) + " đã rời phòng\n");
+                    if (msg.fieldCount() >= 1)
+                        roomPanel.appendChat("\u2B05\uFE0F " + msg.field(0) + " đã rời phòng\n");
                     break;
                 case "ROOM_CHAT_MSG":
-                    if (msg.fieldCount() >= 2) roomPanel.appendChat(msg.field(0) + ": " + msg.field(1) + "\n");
+                    if (msg.fieldCount() >= 2)
+                        roomPanel.appendChat(msg.field(0) + ": " + msg.field(1) + "\n");
                     break;
                 case "ROOM_LEFT":
                     stopLocalTimer();
-                    currentRoom = null; isOwner = false; myTurn = false;
+                    currentRoom = null;
+                    isOwner = false;
+                    myTurn = false;
                     cardLayout.show(mainPanel, "lobby");
                     break;
                 case "GAME_START":
-                    if (msg.fieldCount() >= 1) numDigits = Integer.parseInt(msg.field(0));
+                    if (msg.fieldCount() >= 1)
+                        numDigits = Integer.parseInt(msg.field(0));
                     roomPanel.showGameLayout(numDigits);
                     roomPanel.appendChat("\uD83C\uDFAE GAME BẮT ĐẦU! Chọn số bí mật " + numDigits + " chữ số.\n");
                     roomPanel.setStartEnabled(false);
@@ -270,8 +311,9 @@ public class GameClient extends JFrame {
                     String target = msg.field(0).isEmpty() ? "?" : msg.field(0);
                     timeLeft = msg.fieldCount() >= 2 ? Integer.parseInt(msg.field(1)) : 20;
                     roomPanel.setTurnText("\uD83C\uDFAF Lượt bạn! (" + timeLeft + "s) Đoán số của " + target);
-                    roomPanel.appendChat("\uD83C\uDFAF ĐẾN LƯỢT BẠN! Đoán số của " + target + " (Có " + timeLeft + "s)\n");
-                    
+                    roomPanel.appendChat(
+                            "\uD83C\uDFAF ĐẾN LƯỢT BẠN! Đoán số của " + target + " (Có " + timeLeft + "s)\n");
+
                     stopLocalTimer();
                     turnTimer = new javax.swing.Timer(1000, e -> {
                         timeLeft--;
@@ -303,7 +345,21 @@ public class GameClient extends JFrame {
                     }
                     break;
                 case "PLAYER_WON":
-                    if (msg.fieldCount() >= 2) roomPanel.appendChat("\uD83C\uDFC6 " + msg.field(0) + " thắng! Hạng #" + msg.field(1) + "\n");
+                    if (msg.fieldCount() >= 2) {
+                        String winner = msg.field(0);
+                        String rank = msg.field(1);
+                        roomPanel.appendChat("🏆 " + winner + " thắng! Hạng #" + rank + "\n");
+                        if (winner.equals(nickname)) {
+                            stopLocalTimer();
+                            myTurn = false;
+                            roomPanel.setGuessEnabled(false);
+                            roomPanel.setGuessEditable(false);
+                            roomPanel.resetToChatLayout();
+                            roomPanel.setTurnText("🏆 Hạng #" + rank + " - Đang xem...");
+                            roomPanel.appendChat(
+                                    "\n🎉 Chúc mừng! Bạn hoàn thành nhiệm vụ.\n   Hãy xem tiếp hoặc bấm [ Rời ] để thoát.\n");
+                        }
+                    }
                     break;
                 case "GAME_OVER":
                     stopLocalTimer();
@@ -311,7 +367,8 @@ public class GameClient extends JFrame {
                     if (msg.fieldCount() >= 1) {
                         String[] ranks = msg.field(0).split(",");
                         for (int i = 0; i < ranks.length; i++) {
-                            String m = i == 0 ? "\uD83E\uDD47" : i == 1 ? "\uD83E\uDD48" : i == 2 ? "\uD83E\uDD49" : "  ";
+                            String m = i == 0 ? "\uD83E\uDD47"
+                                    : i == 1 ? "\uD83E\uDD48" : i == 2 ? "\uD83E\uDD49" : "  ";
                             roomPanel.appendChat(m + " #" + (i + 1) + " " + ranks[i] + "\n");
                         }
                     }

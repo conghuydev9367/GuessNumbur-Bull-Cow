@@ -51,7 +51,9 @@ public class GameServer extends JFrame {
         getContentPane().setBackground(NordTheme.BG);
 
         addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) { shutdown(); }
+            public void windowClosing(WindowEvent e) {
+                shutdown();
+            }
         });
 
         JPanel topPanel = new JPanel(new BorderLayout());
@@ -100,13 +102,11 @@ public class GameServer extends JFrame {
         JPanel p = new JPanel(new BorderLayout());
         p.setBackground(NordTheme.BG_SEC);
         p.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createEmptyBorder(5, 5, 5, 5),
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(NordTheme.BORDER),
-                title, TitledBorder.LEFT, TitledBorder.TOP,
-                null, NordTheme.FROST3
-            )
-        ));
+                BorderFactory.createEmptyBorder(5, 5, 5, 5),
+                BorderFactory.createTitledBorder(
+                        BorderFactory.createLineBorder(NordTheme.BORDER),
+                        title, TitledBorder.LEFT, TitledBorder.TOP,
+                        null, NordTheme.FROST3)));
         return p;
     }
 
@@ -120,9 +120,26 @@ public class GameServer extends JFrame {
             serverSocket = new ServerSocket(TCP_PORT);
             InetAddress addr = InetAddress.getLocalHost();
             log("✅ TCP Server đã khởi động tại port " + TCP_PORT);
-            log("📡 Server IP: " + addr.getHostAddress());
+
+            // Liệt kê tất cả IP của máy (Ethernet, WiFi, ...)
+            log("─────────────────────────────");
+            java.util.Enumeration<NetworkInterface> ifaces = NetworkInterface.getNetworkInterfaces();
+            while (ifaces.hasMoreElements()) {
+                NetworkInterface iface = ifaces.nextElement();
+                if (!iface.isUp() || iface.isLoopback() || iface.isVirtual()) continue;
+                java.util.Enumeration<InetAddress> addrs = iface.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    InetAddress a = addrs.nextElement();
+                    if (a instanceof Inet4Address) {
+                        log("📡 " + iface.getDisplayName() + ": " + a.getHostAddress());
+                    }
+                }
+            }
+            log("─────────────────────────────");
+            log("💡 Dùng IP phù hợp với interface đang kết nối cùng Client");
+
             SwingUtilities.invokeLater(() ->
-                statusLabel.setText("🟢 Đang chạy - " + addr.getHostAddress() + ":" + TCP_PORT));
+                    statusLabel.setText("🟢 Đang chạy - " + addr.getHostAddress() + ":" + TCP_PORT));
 
             while (running) {
                 Socket sock = serverSocket.accept();
@@ -133,9 +150,11 @@ public class GameServer extends JFrame {
                 updateClientCount();
             }
         } catch (IOException e) {
-            if (running) log("❌ TCP Error: " + e.getMessage());
+            if (running)
+                log("❌ TCP Error: " + e.getMessage());
         }
     }
+
 
     private void runUDPDiscovery() {
         try {
@@ -160,13 +179,15 @@ public class GameServer extends JFrame {
                 }
             }
         } catch (IOException e) {
-            if (running) log("❌ UDP Error: " + e.getMessage());
+            if (running)
+                log("❌ UDP Error: " + e.getMessage());
         }
     }
 
     private void sendServerChat() {
         String msg = chatField.getText().trim();
-        if (msg.isEmpty()) return;
+        if (msg.isEmpty())
+            return;
         chatField.setText("");
         broadcastToAll(Message.of("CHAT_MSG", "🖥️ Server", msg));
         appendChat("🖥️ Server: " + msg);
@@ -180,7 +201,8 @@ public class GameServer extends JFrame {
             }
         }
         for (ClientHandler ch : clients) {
-            if (ch.nickname != null) ch.send(msg);
+            if (ch.nickname != null)
+                ch.send(msg);
         }
     }
 
@@ -194,23 +216,27 @@ public class GameServer extends JFrame {
         for (Map.Entry<String, Room> entry : rooms.entrySet()) {
             Room room = entry.getValue();
             if (!room.gameStarted) {
-                client.send(Message.of("ROOM_ANNOUNCE", room.code, room.owner, String.valueOf(room.numDigits), String.valueOf(room.turnTime)));
+                client.send(Message.of("ROOM_ANNOUNCE", room.code, room.owner, String.valueOf(room.numDigits),
+                        String.valueOf(room.turnTime)));
             }
         }
     }
 
     private void broadcastToRoom(String roomCode, Message msg) {
         Room room = rooms.get(roomCode);
-        if (room == null) return;
+        if (room == null)
+            return;
         for (String player : room.players) {
             ClientHandler ch = findClient(player);
-            if (ch != null) ch.send(msg);
+            if (ch != null)
+                ch.send(msg);
         }
     }
 
     private ClientHandler findClient(String nickname) {
         for (ClientHandler ch : clients) {
-            if (nickname.equals(ch.nickname)) return ch;
+            if (nickname.equals(ch.nickname))
+                return ch;
         }
         return null;
     }
@@ -219,15 +245,25 @@ public class GameServer extends JFrame {
         String chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         Random rng = new Random();
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) sb.append(chars.charAt(rng.nextInt(chars.length())));
+        for (int i = 0; i < 4; i++)
+            sb.append(chars.charAt(rng.nextInt(chars.length())));
         String code = sb.toString();
         return rooms.containsKey(code) ? generateRoomCode() : code;
     }
 
     private synchronized void handleCreateRoom(ClientHandler client, int numDigits, int turnTime) {
-        if (client.currentRoom != null) { client.send(Message.of("ERROR", "Bạn đang ở trong phòng rồi!")); return; }
-        if (numDigits < 2 || numDigits > 10) { client.send(Message.of("ERROR", "Số chữ số phải từ 2 đến 10!")); return; }
-        if (turnTime < 10 || turnTime > 40) { client.send(Message.of("ERROR", "Thời gian lượt phải từ 10s đến 40s!")); return; }
+        if (client.currentRoom != null) {
+            client.send(Message.of("ERROR", "Bạn đang ở trong phòng rồi!"));
+            return;
+        }
+        if (numDigits < 2 || numDigits > 10) {
+            client.send(Message.of("ERROR", "Số chữ số phải từ 2 đến 10!"));
+            return;
+        }
+        if (turnTime < 10 || turnTime > 40) {
+            client.send(Message.of("ERROR", "Thời gian lượt phải từ 10s đến 40s!"));
+            return;
+        }
         String code = generateRoomCode();
         Room room = new Room(code, client.nickname, numDigits, turnTime);
         room.players.add(client.nickname);
@@ -236,17 +272,30 @@ public class GameServer extends JFrame {
 
         client.send(Message.of("ROOM_CREATED", code));
         client.send(Message.of("ROOM_JOINED", code, client.nickname));
-        broadcastToAll(Message.of("ROOM_ANNOUNCE", code, client.nickname, String.valueOf(numDigits), String.valueOf(turnTime)));
+        broadcastToAll(Message.of("ROOM_ANNOUNCE", code, client.nickname, String.valueOf(numDigits),
+                String.valueOf(turnTime)));
         appendChat("🏠 " + client.nickname + " tạo phòng " + code);
         log("🏠 Phòng " + code + " được tạo bởi " + client.nickname);
     }
 
     private synchronized void handleJoinRoom(ClientHandler client, String code) {
-        if (client.currentRoom != null) { client.send(Message.of("ERROR", "Bạn đang ở trong phòng rồi!")); return; }
+        if (client.currentRoom != null) {
+            client.send(Message.of("ERROR", "Bạn đang ở trong phòng rồi!"));
+            return;
+        }
         Room room = rooms.get(code);
-        if (room == null) { client.send(Message.of("ERROR", "Không tìm thấy phòng " + code + "!")); return; }
-        if (room.gameStarted) { client.send(Message.of("ERROR", "Phòng đang chơi, không thể vào!")); return; }
-        if (room.players.size() >= 6) { client.send(Message.of("ERROR", "Phòng đã đầy (6/6)!")); return; }
+        if (room == null) {
+            client.send(Message.of("ERROR", "Không tìm thấy phòng " + code + "!"));
+            return;
+        }
+        if (room.gameStarted) {
+            client.send(Message.of("ERROR", "Phòng đang chơi, không thể vào!"));
+            return;
+        }
+        if (room.players.size() >= 6) {
+            client.send(Message.of("ERROR", "Phòng đã đầy (6/6)!"));
+            return;
+        }
 
         room.players.add(client.nickname);
         client.currentRoom = code;
@@ -259,20 +308,28 @@ public class GameServer extends JFrame {
     }
 
     private synchronized void handleLeaveRoom(ClientHandler client) {
-        if (client.currentRoom == null) return;
+        if (client.currentRoom == null)
+            return;
         Room room = rooms.get(client.currentRoom);
-        if (room == null) { client.currentRoom = null; return; }
+        if (room == null) {
+            client.currentRoom = null;
+            return;
+        }
 
         room.players.remove(client.nickname);
         boolean wasGuesser = false;
         if (room.gameStarted) {
             if (!room.activePlayers.isEmpty()) {
-                wasGuesser = room.activePlayers.get(room.currentTurnIndex % room.activePlayers.size()).equals(client.nickname);
+                wasGuesser = room.activePlayers.get(room.currentTurnIndex % room.activePlayers.size())
+                        .equals(client.nickname);
             }
             room.activePlayers.remove(client.nickname);
             room.secrets.remove(client.nickname);
             room.rankings.add(client.nickname);
-            if (wasGuesser && room.turnTimer != null) { room.turnTimer.cancel(); room.turnTimer = null; }
+            if (wasGuesser && room.turnTimer != null) {
+                room.turnTimer.cancel();
+                room.turnTimer = null;
+            }
         }
 
         broadcastToRoom(client.currentRoom, Message.of("ROOM_PLAYER_LEFT", client.nickname));
@@ -284,7 +341,8 @@ public class GameServer extends JFrame {
                 log("🗑️ Phòng " + client.currentRoom + " đã bị xóa");
             } else {
                 room.owner = room.players.get(0);
-                broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", room.owner + " là chủ phòng mới"));
+                broadcastToRoom(client.currentRoom,
+                        Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", room.owner + " là chủ phòng mới"));
             }
         }
 
@@ -303,13 +361,24 @@ public class GameServer extends JFrame {
     }
 
     private synchronized void handleStartGame(ClientHandler client) {
-        if (client.currentRoom == null) return;
+        if (client.currentRoom == null)
+            return;
         Room room = rooms.get(client.currentRoom);
-        if (room == null) return;
+        if (room == null)
+            return;
 
-        if (!client.nickname.equals(room.owner)) { client.send(Message.of("ERROR", "Chỉ chủ phòng mới có thể bắt đầu!")); return; }
-        if (room.players.size() < 2) { client.send(Message.of("ERROR", "Cần ít nhất 2 người chơi!")); return; }
-        if (room.gameStarted) { client.send(Message.of("ERROR", "Game đã bắt đầu rồi!")); return; }
+        if (!client.nickname.equals(room.owner)) {
+            client.send(Message.of("ERROR", "Chỉ chủ phòng mới có thể bắt đầu!"));
+            return;
+        }
+        if (room.players.size() < 2) {
+            client.send(Message.of("ERROR", "Cần ít nhất 2 người chơi!"));
+            return;
+        }
+        if (room.gameStarted) {
+            client.send(Message.of("ERROR", "Game đã bắt đầu rồi!"));
+            return;
+        }
 
         room.gameStarted = true;
         room.activePlayers = new ArrayList<>(room.players);
@@ -319,14 +388,17 @@ public class GameServer extends JFrame {
         room.secretsReady = 0;
 
         broadcastToRoom(client.currentRoom, Message.of("GAME_START", String.valueOf(room.numDigits)));
-        broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", "Game bắt đầu! Hãy chọn số bí mật " + room.numDigits + " chữ số."));
+        broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống",
+                "Game bắt đầu! Hãy chọn số bí mật " + room.numDigits + " chữ số."));
         log("🎮 Game bắt đầu tại phòng " + client.currentRoom);
     }
 
     private synchronized void handleSetSecret(ClientHandler client, String secret) {
-        if (client.currentRoom == null) return;
+        if (client.currentRoom == null)
+            return;
         Room room = rooms.get(client.currentRoom);
-        if (room == null || !room.gameStarted) return;
+        if (room == null || !room.gameStarted)
+            return;
 
         if (secret.length() != room.numDigits || !secret.matches("\\d+")) {
             client.send(Message.of("ERROR", "Số bí mật phải có đúng " + room.numDigits + " chữ số!"));
@@ -336,16 +408,21 @@ public class GameServer extends JFrame {
         room.secrets.put(client.nickname, secret);
         room.secretsReady++;
         client.send(Message.of("SECRET_SET", secret));
-        broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", client.nickname + " đã chọn số bí mật ✅"));
+        broadcastToRoom(client.currentRoom,
+                Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", client.nickname + " đã chọn số bí mật ✅"));
 
         if (room.secretsReady == room.activePlayers.size()) {
-            broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", "Tất cả đã sẵn sàng! Bắt đầu đoán số!"));
+            broadcastToRoom(client.currentRoom,
+                    Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", "Tất cả đã sẵn sàng! Bắt đầu đoán số!"));
             startTurn(room, client.currentRoom);
         }
     }
 
     private void startTurn(Room room, String roomCode) {
-        if (room.activePlayers.size() <= 1) { endGame(room, roomCode); return; }
+        if (room.activePlayers.size() <= 1) {
+            endGame(room, roomCode);
+            return;
+        }
 
         int idx = room.currentTurnIndex % room.activePlayers.size();
         String guesser = room.activePlayers.get(idx);
@@ -353,42 +430,63 @@ public class GameServer extends JFrame {
         String target = room.activePlayers.get(targetIdx);
 
         ClientHandler guesserClient = findClient(guesser);
-        if (guesserClient != null) guesserClient.send(Message.of("YOUR_TURN", target, String.valueOf(room.turnTime)));
-        broadcastToRoom(roomCode, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", "Lượt của " + guesser + " → đoán số của " + target));
+        if (guesserClient != null)
+            guesserClient.send(Message.of("YOUR_TURN", target, String.valueOf(room.turnTime)));
+        broadcastToRoom(roomCode,
+                Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", "Lượt của " + guesser + " → đoán số của " + target));
 
-        if (room.turnTimer != null) { room.turnTimer.cancel(); }
+        if (room.turnTimer != null) {
+            room.turnTimer.cancel();
+        }
         room.turnTimer = new java.util.Timer();
         room.turnTimer.schedule(new java.util.TimerTask() {
             @Override
-            public void run() { handleTimeout(room, roomCode, guesser); }
+            public void run() {
+                handleTimeout(room, roomCode, guesser);
+            }
         }, room.turnTime * 1000L);
     }
 
     private synchronized void handleTimeout(Room room, String roomCode, String expectedGuesser) {
-        if (room == null || !room.gameStarted || room.activePlayers.isEmpty()) return;
+        if (room == null || !room.gameStarted || room.activePlayers.isEmpty())
+            return;
         int idx = room.currentTurnIndex % room.activePlayers.size();
         String currentGuesser = room.activePlayers.get(idx);
-        if (!currentGuesser.equals(expectedGuesser)) return;
+        if (!currentGuesser.equals(expectedGuesser))
+            return;
 
-        broadcastToRoom(roomCode, Message.of("ROOM_CHAT_MSG", "⏰", currentGuesser + " đã hết thời gian (" + room.turnTime + "s) và mất lượt!"));
+        broadcastToRoom(roomCode, Message.of("ROOM_CHAT_MSG", "⏰",
+                currentGuesser + " đã hết thời gian (" + room.turnTime + "s) và mất lượt!"));
         ClientHandler guesserClient = findClient(currentGuesser);
-        if (guesserClient != null) guesserClient.send(Message.of("TURN_TIMEOUT"));
+        if (guesserClient != null)
+            guesserClient.send(Message.of("TURN_TIMEOUT"));
 
         room.currentTurnIndex = (idx + 1) % room.activePlayers.size();
         startTurn(room, roomCode);
     }
 
     private synchronized void handleGuess(ClientHandler client, String guess) {
-        if (client.currentRoom == null) return;
+        if (client.currentRoom == null)
+            return;
         Room room = rooms.get(client.currentRoom);
-        if (room == null || !room.gameStarted) return;
+        if (room == null || !room.gameStarted)
+            return;
 
         int idx = room.currentTurnIndex % room.activePlayers.size();
         String currentGuesser = room.activePlayers.get(idx);
-        if (!client.nickname.equals(currentGuesser)) { client.send(Message.of("ERROR", "Chưa đến lượt của bạn!")); return; }
-        if (guess.length() != room.numDigits || !guess.matches("\\d+")) { client.send(Message.of("ERROR", "Số đoán phải có đúng " + room.numDigits + " chữ số!")); return; }
+        if (!client.nickname.equals(currentGuesser)) {
+            client.send(Message.of("ERROR", "Chưa đến lượt của bạn!"));
+            return;
+        }
+        if (guess.length() != room.numDigits || !guess.matches("\\d+")) {
+            client.send(Message.of("ERROR", "Số đoán phải có đúng " + room.numDigits + " chữ số!"));
+            return;
+        }
 
-        if (room.turnTimer != null) { room.turnTimer.cancel(); room.turnTimer = null; }
+        if (room.turnTimer != null) {
+            room.turnTimer.cancel();
+            room.turnTimer = null;
+        }
 
         int targetIdx = (idx + 1) % room.activePlayers.size();
         String target = room.activePlayers.get(targetIdx);
@@ -396,11 +494,33 @@ public class GameServer extends JFrame {
 
         int correctCount = 0;
         for (int i = 0; i < secret.length(); i++) {
-            if (secret.charAt(i) == guess.charAt(i)) correctCount++;
+            if (secret.charAt(i) == guess.charAt(i))
+                correctCount++;
         }
 
         client.send(Message.of("GUESS_RESULT", String.valueOf(correctCount)));
-        broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮", client.nickname + " đoán [" + guess + "] → " + correctCount + "/" + room.numDigits + " số đúng"));
+
+        // Broadcast công khai — không lộ bí mật
+        broadcastToRoom(client.currentRoom, Message.of("ROOM_CHAT_MSG", "🎮",
+                client.nickname + " đoán [" + guess + "] → " + correctCount + "/" + room.numDigits + " số đúng"));
+
+        // Gửi riêng cho Target: thấy được số đoán so với bí mật của mình
+        ClientHandler targetClient = findClient(target);
+        if (targetClient != null) {
+            targetClient.send(Message.of("ROOM_CHAT_MSG", "🎯 Riêng bạn",
+                    "[" + guess + "] so với số của bạn [" + secret + "] → " + correctCount + "/" + room.numDigits
+                            + " đúng"));
+        }
+
+        // Gửi riêng cho những người đã thắng (spectator) để theo dõi
+        for (String rankedPlayer : room.rankings) {
+            ClientHandler rch = findClient(rankedPlayer);
+            if (rch != null && !rankedPlayer.equals(target)) {
+                rch.send(Message.of("ROOM_CHAT_MSG", "👁️ Khán giả",
+                        client.nickname + " đoán [" + guess + "] | bí mật " + target + ": [" + secret + "] → "
+                                + correctCount + "/" + room.numDigits));
+            }
+        }
 
         if (correctCount == room.numDigits) {
             int rank = room.rankings.size() + 1;
@@ -414,13 +534,15 @@ public class GameServer extends JFrame {
             room.activePlayers.remove(client.nickname);
 
             if (room.activePlayers.size() <= 1) {
-                if (room.activePlayers.size() == 1) room.rankings.add(room.activePlayers.get(0));
+                if (room.activePlayers.size() == 1)
+                    room.rankings.add(room.activePlayers.get(0));
                 endGame(room, client.currentRoom);
             } else {
                 // Dùng < (không phải <=) để tránh currentTurnIndex bị âm trong Java
                 // Khi attacker thắng (winnerIdx == currentTurnIndex), không giảm index:
                 // phần tử tại index đó giờ là target (B) → B tiếp tục là người đoán tiếp
-                if (winnerIdx < room.currentTurnIndex) room.currentTurnIndex--;
+                if (winnerIdx < room.currentTurnIndex)
+                    room.currentTurnIndex--;
                 room.currentTurnIndex = room.currentTurnIndex % room.activePlayers.size();
                 startTurn(room, client.currentRoom);
             }
@@ -431,8 +553,11 @@ public class GameServer extends JFrame {
     }
 
     private void endGame(Room room, String roomCode) {
-        if (room.turnTimer != null) { room.turnTimer.cancel(); room.turnTimer = null; }
-        
+        if (room.turnTimer != null) {
+            room.turnTimer.cancel();
+            room.turnTimer = null;
+        }
+
         for (String p : room.activePlayers) {
             if (!room.rankings.contains(p)) {
                 room.rankings.add(p);
@@ -447,13 +572,14 @@ public class GameServer extends JFrame {
             String playerName = room.rankings.get(i);
             String playerSecret = room.secrets.getOrDefault(playerName, "???");
             sb.append(medal).append(" #").append(i + 1).append(" - ")
-              .append(playerName).append(" (số bí mật: ").append(playerSecret).append(")\n");
+                    .append(playerName).append(" (số bí mật: ").append(playerSecret).append(")\n");
         }
         sb.append("══════════════════════════════\n");
 
         broadcastToRoom(roomCode, Message.of("ROOM_CHAT_MSG", "🎮 Hệ thống", sb.toString()));
         broadcastToRoom(roomCode, Message.of("GAME_OVER", String.join(",", room.rankings)));
-        broadcastToAll(Message.of("CHAT_MSG", "🎮 Hệ thống", "Phòng [" + roomCode + "] đã kết thúc game! 🏆 " + room.rankings.get(0)));
+        broadcastToAll(Message.of("CHAT_MSG", "🎮 Hệ thống",
+                "Phòng [" + roomCode + "] đã kết thúc game! 🏆 " + room.rankings.get(0)));
         appendChat("🏆 Phòng " + roomCode + " kết thúc - Thắng: " + room.rankings.get(0));
         log("🏆 Game kết thúc tại phòng " + roomCode);
 
@@ -489,9 +615,18 @@ public class GameServer extends JFrame {
     private void shutdown() {
         running = false;
         broadcastToAll(Message.of("SERVER_SHUTDOWN"));
-        try { if (serverSocket != null) serverSocket.close(); } catch (Exception ignored) {}
-        try { if (udpSocket != null) udpSocket.close(); } catch (Exception ignored) {}
-        for (ClientHandler ch : clients) ch.close();
+        try {
+            if (serverSocket != null)
+                serverSocket.close();
+        } catch (Exception ignored) {
+        }
+        try {
+            if (udpSocket != null)
+                udpSocket.close();
+        } catch (Exception ignored) {
+        }
+        for (ClientHandler ch : clients)
+            ch.close();
         System.exit(0);
     }
 
@@ -529,7 +664,9 @@ public class GameServer extends JFrame {
             String data = msg.field(0);
 
             switch (cmd) {
-                case "NICK": handleNick(data); break;
+                case "NICK":
+                    handleNick(data);
+                    break;
                 case "CHAT":
                     if (nickname != null) {
                         if (currentRoom != null) {
@@ -548,11 +685,16 @@ public class GameServer extends JFrame {
                         int digits = Integer.parseInt(msg.field(0).trim());
                         int turnTime = msg.fieldCount() > 1 ? Integer.parseInt(msg.field(1).trim()) : 20;
                         handleCreateRoom(this, digits, turnTime);
+                    } catch (NumberFormatException e) {
+                        send(Message.of("ERROR", "Tham số không hợp lệ!"));
                     }
-                    catch (NumberFormatException e) { send(Message.of("ERROR", "Tham số không hợp lệ!")); }
                     break;
-                case "JOIN_ROOM": handleJoinRoom(this, data.trim().toUpperCase()); break;
-                case "LEAVE_ROOM": handleLeaveRoom(this); break;
+                case "JOIN_ROOM":
+                    handleJoinRoom(this, data.trim().toUpperCase());
+                    break;
+                case "LEAVE_ROOM":
+                    handleLeaveRoom(this);
+                    break;
                 case "ROOM_CHAT":
                     if (currentRoom != null && nickname != null) {
                         Room r = rooms.get(currentRoom);
@@ -563,17 +705,29 @@ public class GameServer extends JFrame {
                         broadcastToRoom(currentRoom, Message.of("ROOM_CHAT_MSG", nickname, data));
                     }
                     break;
-                case "START_GAME": handleStartGame(this); break;
-                case "SET_SECRET": handleSetSecret(this, data.trim()); break;
-                case "GUESS": handleGuess(this, data.trim()); break;
+                case "START_GAME":
+                    handleStartGame(this);
+                    break;
+                case "SET_SECRET":
+                    handleSetSecret(this, data.trim());
+                    break;
+                case "GUESS":
+                    handleGuess(this, data.trim());
+                    break;
             }
         }
 
         private void handleNick(String name) {
             name = name.trim();
-            if (name.isEmpty() || name.length() > 20) { send(Message.of("ERROR", "Nickname không hợp lệ (1-20 ký tự)!")); return; }
+            if (name.isEmpty() || name.length() > 20) {
+                send(Message.of("ERROR", "Nickname không hợp lệ (1-20 ký tự)!"));
+                return;
+            }
             for (ClientHandler ch : clients) {
-                if (name.equals(ch.nickname)) { send(Message.of("ERROR", "Nickname đã được sử dụng!")); return; }
+                if (name.equals(ch.nickname)) {
+                    send(Message.of("ERROR", "Nickname đã được sử dụng!"));
+                    return;
+                }
             }
             this.nickname = name;
             send(Message.of("NICK_OK", name));
@@ -586,7 +740,8 @@ public class GameServer extends JFrame {
         }
 
         private void handleDisconnect() {
-            if (currentRoom != null) handleLeaveRoom(this);
+            if (currentRoom != null)
+                handleLeaveRoom(this);
             clients.remove(this);
             if (nickname != null) {
                 broadcastToAll(Message.of("CHAT_MSG", "🎮 Hệ thống", nickname + " đã rời đi."));
@@ -598,11 +753,16 @@ public class GameServer extends JFrame {
         }
 
         void send(Message msg) {
-            if (output != null && msg != null) output.println(msg.serialize());
+            if (output != null && msg != null)
+                output.println(msg.serialize());
         }
 
         void close() {
-            try { if (link != null) link.close(); } catch (Exception ignored) {}
+            try {
+                if (link != null)
+                    link.close();
+            } catch (Exception ignored) {
+            }
         }
     }
 
